@@ -1,0 +1,52 @@
+# ----------------
+# BLAST alignments
+# ----------------
+
+makeblastdb -in Odioica_reference_v3.0.fa -dbtype nucl -title OIKOPLEURA_v3 -out OIKOPLEURA_v3
+makeblastdb -in final_phallusia_assembly.fa -dbtype nucl -title PHALLUSIA_2010_11_07 -out PHALLUSIA_2010_11_07
+makeblastdb -in Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.fa -dbtype nucl -title Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.bldb -out Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.bldb
+
+nohup blastn -query Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -task blastn -db PHALLUSIA_2010_11_07 -out BLASTN_DEFAULT.out &
+nohup blastn -query Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -task blastn -db OIKOPLEURA_v3 -out BLASTN_DEFAULT.out &
+nohup blastn -query Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -task blastn -db Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.bldb -out BLASTN_DEFAULT.out &
+
+# --------------------
+# DATABASE ANNOTATIONS
+# --------------------
+
+mysql -umysql_dev -priiGbs < CREATE_DB.mysql
+
+perl fa2mysql.pl ../GENOMES/Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa bp_ciona_intestinalis_59 Y
+perl fa2mysql.pl ../GENOMES/Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.fa bp_ciona_savignyi_59 Y
+perl fa2mysql.pl ../GENOMES/final_phallusia_assembly.fa bp_phallusia_1 Y
+perl fa2mysql.pl ../GENOMES/Odioica_reference_v3.0.fa bp_oikopleura_3 Y
+
+perl gtf2mysql.pl ../GENOMES/Ciona_intestinalis.JGI2.60.gtf bp_ciona_intestinalis_59
+
+# -------------------------------
+# CONVERT BLAST ALIGNMENTS TO GFF
+# -------------------------------
+perl comparative_blast_to_gff.pl ../BLAST_RES/INT_vs_PHALLUSIA_BLASTN_DEF.out BLASTN PM
+perl comparative_blast_to_gff.pl ../BLAST_RES/INT_vs_SAV_BLASTN_DEF.out BLASTN CS
+perl comparative_blast_to_gff.pl ../BLAST_RES/INT_vs_OIKOPLEURA_BLASTN_DEF.out BLASTN OD
+
+# -------------------------------
+# LOAD GFF ALIGNMENTS INTO THE DB
+#--------------------------------
+
+perl gff2mysql.pl ../BLAST_RES/INT_vs_SAV_BLASTN_DEF.out.gff bp_ciona_intestinalis_59
+perl gff2mysql.pl ../BLAST_RES/INT_vs_OIKOPLEURA_BLASTN_DEF.out.gff bp_ciona_intestinalis_59
+perl gff2mysql.pl ../BLAST_RES/INT_vs_PHALLUSIA_BLASTN_DEF.out.gff bp_ciona_intestinalis_59
+
+# ------------
+# tRNA MAPPING
+# ------------
+
+wget http://gtrnadb.ucsc.edu/download/tRNAs/eukaryotic-tRNAs.fa.gz
+perl select_human_tRNA.pl eukaryotic-tRNAs.fa
+makeblastdb -in human_eukaryotic-tRNAs.fa -dbtype nucl -title HUMAN_TRNA -out HUMAN_TRNA
+blastdbcmd -info -db HUMAN_TRNA
+nohup blastn -query ../GENOMES/Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -task blastn -db HUMAN_TRNA -out CIONA_TRNA_BLAST.out &
+perl tRNA_blast_to_gff.pl ../BLAST_RES/CIONA_TRNA_BLAST.out BLASTN 50
+perl gff2mysql.pl ../BLAST_RES/CIONA_TRNA_BLAST.out.gff bp_ciona_intestinalis_59
+
