@@ -50,3 +50,23 @@ nohup blastn -query ../GENOMES/Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -ta
 perl tRNA_blast_to_gff.pl ../BLAST_RES/CIONA_TRNA_BLAST.out BLASTN 50
 perl gff2mysql.pl ../BLAST_RES/CIONA_TRNA_BLAST.out.gff bp_ciona_intestinalis_59
 
+
+
+
+
+# Ciona MEGABLAST
+
+makeblastdb -in Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -dbtype nucl -title CIN_JGI2_E59_RM -out Ciona_intestinalis.JGI2.59.dna_rm.toplevel.bldb
+
+blastdbcmd -info -db Ciona_intestinalis.JGI2.59.dna_rm.toplevel.bldb
+
+makeblastdb -in Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.fa -dbtype nucl -title CSA_2_E59_RM -out Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.bldb
+
+blastdbcmd -info -db Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.bldb
+
+nohup blastn -query Ciona_intestinalis.JGI2.59.dna_rm.toplevel.fa -task megablast -db  Ciona_savignyi.CSAV2.0.59.dna_rm.toplevel.bldb -out MEGABLAST.out &
+
+perl comparative_blast_to_gff.pl MEGABLAST.out /home/remo/ANALYSIS/CIONA_UCE/ MEGABLAST
+
+perl gff_to_sqlite_create.pl MEGABLAST.out.gff /home/remo/ANALYSIS/CIONA_UCE
+
